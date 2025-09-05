@@ -900,8 +900,30 @@ Return the drawn picture.`;
 
             // 事件：应用/清除覆盖
             wsRatioRow.querySelector('#ws-apply-ratio').addEventListener('click', () => {
-            const w = Number(wsRatioRow.querySelector('#ws-ratio-w').value);
-            const h = Number(wsRatioRow.querySelector('#ws-ratio-h').value);
+            let w = Number(wsRatioRow.querySelector('#ws-ratio-w').value);
+            let h = Number(wsRatioRow.querySelector('#ws-ratio-h').value);
+            // 若未在本行输入，则回退读取页面顶部“自定义宽高”输入框
+            if (!(w > 0 && h > 0)) {
+                const cwEl = document.getElementById('custom-width');
+                const chEl = document.getElementById('custom-height');
+                const cw = Number(cwEl && cwEl.value);
+                const ch = Number(chEl && chEl.value);
+                if (cw > 0 && ch > 0) {
+                    w = cw; h = ch;
+                    // 同步回填到本行输入，便于后续调整
+                    const wEl = wsRatioRow.querySelector('#ws-ratio-w');
+                    const hEl = wsRatioRow.querySelector('#ws-ratio-h');
+                    if (wEl && hEl) { wEl.value = String(w); hEl.value = String(h); }
+                }
+            }
+            // 再次无效则回退到当前上方选择的比例 currentRatio
+            if (!(w > 0 && h > 0)) {
+                try {
+                    const raw = (currentRatio || '16:9').split(':');
+                    const rw = Number(raw[0]), rh = Number(raw[1]);
+                    if (rw > 0 && rh > 0) { w = rw; h = rh; }
+                } catch (e) {}
+            }
             if (w > 0 && h > 0) {
                 workspaceRatioOverride = { w, h };
                 updateWorkspaceSize();
