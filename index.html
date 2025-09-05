@@ -593,7 +593,7 @@
         function updatePromptText() {
             const promptTemplate = `{{ File: Original Image }}
 
-Update the input image by replacing the green screen according to the description provided on it, ensuring that the new scene blends seamlessly as a whole. The final image should have no green screen(#00B140), reference lines(#00D4AA) or text description(#00D4AA) visible.
+Update the input image by replacing the green screen according to the description provided on it, ensuring that the new scene blends seamlessly as a whole. The final image should have no green screen(#00B140), reference lines(#00D4AA), borders(#00D4AA) or text description(#00D4AA) visible.
 
 \`\`\`yaml
 {{ YAML格式提示词 }}
@@ -756,7 +756,7 @@ Return the drawn picture.`;
             <button id="ws-add-mask" type="button" title="在工作区添加可拖拽的绿幕遮罩">➕ 添加绿幕</button>
             <label style="display:flex;align-items:center;gap:6px;" title="切换是否在所有绿幕上显示三段文案（全局）">
                 <input id="ws-toggle-text" type="checkbox" checked>
-                显示遮罩文案（全局）
+                显示遮罩文案（全局）勾选后可在图层列表中单独控制
             </label>
         </div>
         <div class="ws-tip">提示：拖拽移动；拖拽右下角缩放；图片保持宽高比；绿幕可自由缩放；最多导入 10 张图片。</div>
@@ -1109,7 +1109,7 @@ Return the drawn picture.`;
                         ctx.strokeStyle = '#00D4AA';
                         ctx.lineWidth = 2;
                         ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
-                        if (state.showTexts) {
+                        if (state.showTexts && (obj.showText !== false)) {
                             // 参考斜线：从右上角到左下角
                             ctx.strokeStyle = '#00D4AA';
                             ctx.lineWidth = 2;
@@ -1300,7 +1300,7 @@ Return the drawn picture.`;
                         }
                     }
                     // 绿幕：仅在显示文案模式下（左上角有标签）再叠加一次左上角标签
-                    else if (obj.type === 'mask' && state.showTexts) {
+                    else if (obj.type === 'mask' && state.showTexts && (obj.showText !== false)) {
                         ctx.save();
                         ctx.fillStyle = '#00D4AA';
                         ctx.font = 'bold 14px Arial';
@@ -1526,6 +1526,35 @@ Return the drawn picture.`;
                         });
 
                         item.appendChild(nameInput);
+                        // 独立开关：是否显示该遮罩的文案（与全局总开关共同生效）
+                        const showWrap = document.createElement('label');
+                        showWrap.style.display = 'flex';
+                        showWrap.style.alignItems = 'center';
+                        showWrap.style.gap = '6px';
+                        showWrap.title = '显示遮罩文案';
+
+                        const showCb = document.createElement('input');
+                        showCb.type = 'checkbox';
+                        showCb.checked = (o.showText !== false);
+
+                        const showTxt = document.createElement('span');
+                        showTxt.textContent = '文案';
+
+                        // 阻止冒泡，避免影响选中/拖拽
+                        ['click','mousedown','mouseup','dblclick','keydown','keyup','change'].forEach(ev => {
+                            showCb.addEventListener(ev, e => e.stopPropagation());
+                            showWrap.addEventListener(ev, e => e.stopPropagation());
+                        });
+
+                        showCb.addEventListener('change', () => {
+                            o.showText = showCb.checked;
+                            render();
+                        });
+
+                        showWrap.appendChild(showCb);
+                        showWrap.appendChild(showTxt);
+                        item.appendChild(showWrap);
+
                         item.appendChild(delBtn);
                     } else if (o.type === 'image') {
                         // 为图片提供删除按钮（不提供重命名）
@@ -1552,6 +1581,21 @@ Return the drawn picture.`;
                             }
                         });
 
+                        // 独立开关：是否显示遮罩文案（受全局总开关共同约束）
+                        const showCb = document.createElement('input');
+                        showCb.type = 'checkbox';
+                        showCb.title = '显示遮罩文案';
+                        showCb.checked = (o.showText !== false);
+                        ['click','mousedown','mouseup','dblclick','keydown','keyup','change'].forEach(ev => {
+                            showCb.addEventListener(ev, e => e.stopPropagation());
+                        });
+                        showCb.addEventListener('change', () => {
+                            o.showText = showCb.checked;
+                            render();
+                        });
+
+                        item.appendChild(nameInput);
+                        item.appendChild(showCb);
                         item.appendChild(delBtn);
                     }
 
@@ -1645,6 +1689,7 @@ Return the drawn picture.`;
                     w, h,
                     // 自定义标签独立，默认空；工作区显示此标签；图层栏显示固定序号在 staticName
                     label: '',
+                    showText: true,
                     // 固定序号名（不变更、不受重排影响）
                     seqId: seq,
                     seqName: `Mask ${seq}`
@@ -1695,7 +1740,7 @@ Return the drawn picture.`;
                         c.lineWidth = 2;
                         c.strokeRect(obj.x, obj.y, obj.w, obj.h);
 
-                        if (state.showTexts) {
+                        if (state.showTexts && (obj.showText !== false)) {
                             // 参考斜线
                             c.strokeStyle = '#00D4AA';
                             c.lineWidth = 2;
