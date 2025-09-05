@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绿幕生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 920px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #00B140, #00D4AA);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .section-subtitle {
+            margin: 12px 0 8px;
+            font-size: 14px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .aspect-ratio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .aspect-btn {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .aspect-btn:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .aspect-btn.active {
+            background: #00B140;
+            color: white;
+            border-color: #00B140;
+        }
+
+        .orientation-group {
+            margin-top: 6px;
+        }
+
+        .custom-input {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .custom-input input {
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .custom-input span {
+            text-align: center;
+            font-weight: bold;
+            color: #666;
+        }
+
+        .generate-btn {
+            background: linear-gradient(45deg, #00B140, #00D4AA);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 177, 64, 0.3);
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+        }
+
+        .canvas-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        #greenscreen-canvas {
+            border: 2px solid #00B140;
+            border-radius: 0;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .download-btn,
+        .copy-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover,
+        .copy-btn:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+
+        .prompt-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .prompt-text {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .copy-success {
+            background: #28a745 !important;
+        }
+
+        .info-text {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+
+        /* Layers panel */
+        .ws-layers-panel {
+            margin-top: 12px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+        }
+        .ws-layers-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #f1f3f5;
+        }
+        .ws-layers-header button {
+            background:#6c757d;
+            color:#fff;
+            border:none;
+            padding:6px 10px;
+            border-radius:6px;
+            cursor:pointer;
+            font-weight:600;
+        }
+        .ws-layers-header button:hover {
+            background:#5a6268;
+        }
+        .ws-layers-content {
+            max-height: 180px;
+            overflow-y: auto;
+            padding: 6px;
+        }
+        .ws-layer-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 8px;
+            border: 1px solid #f1f3f5;
+            border-radius: 6px;
+            margin: 4px 0;
+            cursor: pointer;
+            user-select: none;
+            background: #f8f9fa;
+        }
+        .ws-layer-item:hover {
+            background: #eef2f3;
+        }
+        .ws-layer-item.selected {
+            border-color: #00B140;
+            background: #e6fff1;
+        }
+        .ws-layer-type {
+            width: 22px;
+            text-align: center;
+        }
+        .ws-layer-label {
+            flex: 1;
+            color: #333;
+            font-weight: 600;
+        }
+        .ws-layer-handle {
+            color: #666;
+            font-size: 16px;
+            cursor: grab;
+        }
+        .ws-layers-panel.collapsed .ws-layers-content {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 绿幕生成器(离线版, 不存储任何数据)</h1>
+            <p>Generate green screen images with custom aspect ratios</p>
+        </div>
+
+        <div class="content">
+            <div class="form-group">
+                <label>选择宽高比 / Select Aspect Ratio:</label>
+                <div class="section-subtitle">社交媒体 / Social Media</div>
+                <div class="aspect-ratio-grid">
+                    <div class="aspect-btn" data-ratio="1:1" data-label="instagram-square">1:1<br><small>Instagram
+                            Square</small></div>
+                    <div class="aspect-btn" data-ratio="4:5" data-label="instagram-portrait">4:5<br><small>Instagram
+                            Portrait</small></div>
+                    <div class="aspect-btn" data-ratio="9:16" data-label="story-reels-tiktok">
+                        9:16<br><small>Story/Reels/TikTok</small></div>
+                    <div class="aspect-btn" data-ratio="1.91:1" data-label="fb-twitter-landscape">
+                        1.91:1<br><small>FB/Twitter Landscape</small></div>
+                    <div class="aspect-btn" data-ratio="2:3" data-label="pinterest">2:3<br><small>Pinterest</small>
+                    </div>
+                    <div class="aspect-btn" data-ratio="3:4" data-label="x-portrait">3:4<br><small>X Portrait</small>
+                    </div>
+                </div>
+
+                <div class="section-subtitle">视频创作 / Video</div>
+                <div class="aspect-ratio-grid">
+                    <div class="aspect-btn" data-ratio="16:9" data-label="hd-youtube">16:9<br><small>HD/YouTube</small>
+                    </div>
+                    <div class="aspect-btn" data-ratio="4:3" data-label="classic">4:3<br><small>Classic</small></div>
+                    <div class="aspect-btn" data-ratio="3:2" data-label="camera">3:2<br><small>Camera</small></div>
+                    <div class="aspect-btn" data-ratio="2.39:1" data-label="cinemascope">
+                        2.39:1<br><small>Cinemascope</small></div>
+                    <div class="aspect-btn" data-ratio="1.85:1" data-label="academy-flat">1.85:1<br><small>Academy
+                            Flat</small></div>
+                    <div class="aspect-btn" data-ratio="17:9" data-label="dci">17:9<br><small>DCI</small></div>
+                    <div class="aspect-btn" data-ratio="1.43:1" data-label="imax">1.43:1<br><small>IMAX</small></div>
+                    <div class="aspect-btn" data-ratio="21:9" data-label="ultra-wide">21:9<br><small>Ultra-wide</small>
+                    </div>
+                </div>
+
+                <div class="section-subtitle">显示设备 (2020+) / Displays</div>
+                <div class="aspect-ratio-grid">
+                    <div class="aspect-btn" data-ratio="16:10" data-label="laptop-16-10">16:10<br><small>Apple MacBook,
+                            Dell/Lenovo</small></div>
+                    <div class="aspect-btn" data-ratio="3:2" data-label="laptop-3-2">3:2<br><small>Microsoft Surface,
+                            Huawei MateBook</small></div>
+                    <div class="aspect-btn" data-ratio="16:9" data-label="tv-16-9">16:9<br><small>TV:
+                            Samsung/LG/Sony</small></div>
+                    <div class="aspect-btn" data-ratio="21:9" data-label="lg-ultrawide">21:9<br><small>LG
+                            UltraWide</small></div>
+                    <div class="aspect-btn" data-ratio="32:9" data-label="samsung-super-ultrawide">
+                        32:9<br><small>Samsung Super UltraWide</small></div>
+                </div>
+
+                <div class="section-subtitle">移动设备 (2020+) / Mobile</div>
+                <div class="aspect-ratio-grid">
+                    <div class="aspect-btn" data-ratio="19.5:9" data-label="apple-iphone">19.5:9<br><small>Apple
+                            iPhone</small></div>
+                    <div class="aspect-btn" data-ratio="20:9" data-label="android-20-9">20:9<br><small>Google
+                            Pixel</small></div>
+                    <div class="aspect-btn" data-ratio="19:9" data-label="android-19-9">19:9<br><small>Android
+                            (common)</small></div>
+                    <div class="aspect-btn" data-ratio="2:1" data-label="mobile-2-1">2:1<br><small>Mobile Tall
+                            (18:9)</small></div>
+                </div>
+
+                <div class="section-subtitle">方向 / Orientation</div>
+                <div class="aspect-ratio-grid orientation-group"
+                    style="grid-template-columns: repeat(2, minmax(120px, 1fr));">
+                    <div class="aspect-btn orientation-btn" data-orientation="landscape">横向<br><small>Landscape</small>
+                    </div>
+                    <div class="aspect-btn orientation-btn" data-orientation="portrait">纵向<br><small>Portrait</small>
+                    </div>
+                </div>
+
+                <div class="custom-input">
+                    <input type="number" id="custom-width" placeholder="宽度" min="1" max="4000">
+                    <span>:</span>
+                    <input type="number" id="custom-height" placeholder="高度" min="1" max="4000">
+                </div>
+            </div>
+
+
+
+            <div class="result-section" id="result-section">
+                <h3>📸 生成结果 / Generated Result</h3>
+                <div class="canvas-container">
+                    <canvas id="greenscreen-canvas"></canvas>
+                </div>
+
+                <div style="text-align: center;">
+                    <button class="download-btn" onclick="downloadImage(1)">💾 下载1倍图 Download 1x</button>
+                    <button class="download-btn" onclick="downloadImage(2)">💾 下载2倍图 Download 2x</button>
+                    <button class="download-btn" onclick="downloadImage(3)">💾 下载3倍图 Download 3x</button>
+                </div>
+
+                <div class="prompt-section">
+                    <h4>📝 AI提示词模板 (绿幕修改) / AI Prompt Template</h4>
+                    <div class="prompt-text" id="prompt-text"></div>
+                    <button class="copy-btn" id="copy-btn1" onclick="copyPrompt()">
+                        📋 复制提示词 Copy Prompt
+                    </button>
+                </div>
+
+                <div class="prompt-section">
+                    <h4>📝 AI提示词模板(n 合 1) / AI Prompt Template</h4>
+                    <div class="prompt-text" id="prompt-text2"></div>
+                    <button class="copy-btn" id="copy-btn2" onclick="copyPrompt2()">
+                        📋 复制提示词 Copy Prompt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRatio = '16:9';
+        let currentLabel = 'hd-youtube';
+        let orientation = 'landscape';
+
+        // 预设宽高比选择
+        document.querySelectorAll('.aspect-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                if (this.dataset.ratio) {
+                    document.querySelectorAll('.aspect-btn[data-ratio]').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentRatio = this.dataset.ratio;
+                    currentLabel = this.dataset.label || 'custom';
+
+                    // 清空自定义输入
+                    document.getElementById('custom-width').value = '';
+                    document.getElementById('custom-height').value = '';
+
+                    // 选择预设即自动渲染
+                    generateGreenscreen();
+                }
+            });
+        });
+
+        // 默认选中16:9 和 横向
+        document.querySelector('[data-ratio="16:9"]').classList.add('active');
+        document.querySelector('[data-orientation="landscape"]').classList.add('active');
+
+        // 方向切换
+        document.querySelectorAll('.orientation-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.orientation-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                orientation = this.dataset.orientation;
+                // 切换方向后立即重绘
+                generateGreenscreen();
+            })
+        });
+
+        // 自定义输入监听
+        document.getElementById('custom-width').addEventListener('input', updateCustomRatio);
+        document.getElementById('custom-height').addEventListener('input', updateCustomRatio);
+
+        function updateCustomRatio() {
+            const width = document.getElementById('custom-width').value;
+            const height = document.getElementById('custom-height').value;
+
+            if (width && height) {
+                document.querySelectorAll('.aspect-btn[data-ratio]').forEach(b => b.classList.remove('active'));
+                currentRatio = `${width}:${height}`;
+                // 输入有效时自动渲染
+                generateGreenscreen();
+            }
+        }
+
+        function generateGreenscreen() {
+            let width, height;
+
+            // 获取自定义尺寸或使用预设比例
+            const customWidth = document.getElementById('custom-width').value;
+            const customHeight = document.getElementById('custom-height').value;
+
+            let ratioW, ratioH; // 用于计算比例展示（已应用方向）
+            const isCustom = !!(customWidth && customHeight);
+
+            // 辅助：按方向调整宽高/比例
+            const applyOrientation = (w, h) => {
+                if (orientation === 'landscape' && w < h) return [h, w];
+                if (orientation === 'portrait' && w > h) return [h, w];
+                return [w, h];
+            };
+
+            if (isCustom) {
+                let w = parseInt(customWidth);
+                let h = parseInt(customHeight);
+                [w, h] = applyOrientation(w, h);
+                width = w; height = h;
+                ratioW = w; ratioH = h;
+            } else {
+                const [wStr, hStr] = currentRatio.split(':');
+                let w = Number(wStr);
+                let h = Number(hStr);
+                [w, h] = applyOrientation(w, h);
+                const baseSize = 400; // 基础尺寸
+                const maxWH = Math.max(w, h);
+                width = (w / maxWH) * baseSize;
+                height = (h / maxWH) * baseSize;
+                ratioW = w; ratioH = h;
+            }
+
+            const canvas = document.getElementById('greenscreen-canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = width;
+            canvas.height = height;
+
+            // 绘制绿幕背景（纯色）
+            ctx.fillStyle = '#00B140';
+            ctx.fillRect(0, 0, width, height);
+
+            // 无纹理线条，保持纯色背景
+            // 参考斜线：从右上角到左下角
+            ctx.strokeStyle = '#00D4AA';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(width, 0);
+            ctx.lineTo(0, height);
+            ctx.stroke();
+
+            // 比例文案：预设直接显示 currentRatio；自定义时按小边归一到 1，保留 1 位小数
+            let aspectText;
+            if (isCustom) {
+                const minSide = Math.min(ratioW, ratioH);
+                const normW = (ratioW / minSide).toFixed(1);
+                const normH = (ratioH / minSide).toFixed(1);
+                aspectText = `${normW}:${normH}`;
+            } else {
+                const [wTok, hTok] = currentRatio.split(':');
+                // 预设按方向显示（不折算）
+                if (orientation === 'landscape') {
+                    aspectText = (Number(wTok) >= Number(hTok)) ? `${wTok}:${hTok}` : `${hTok}:${wTok}`;
+                } else {
+                    aspectText = (Number(wTok) <= Number(hTok)) ? `${wTok}:${hTok}` : `${hTok}:${wTok}`;
+                }
+            }
+            const p1 = 'Green screen - Update the input image by replacing the green screen according to the description provided on it.';
+            const p2 = `The aspect ratio of this image is ${aspectText}`;
+            const p3 = 'Do not change the input aspect ratio.';
+
+            // 文本样式与自动换行
+            ctx.fillStyle = '#00D4AA';
+            const fontSize = Math.min(width, height) / 15;
+            ctx.font = `bold ${fontSize}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const lineHeight = fontSize * 1.2; // 行高
+            const paddingXConst = fontSize * 0.4;
+            const paddingYConst = fontSize * 0.3;
+            const maxTextWidth = Math.max(10, width - 2 * paddingXConst - 8); // 确保包含内边距也不越界
+            function wrapText(context, text, maxWidth) {
+                const words = text.split(' ');
+                const lines = [];
+                let line = '';
+                for (let n = 0; n < words.length; n++) {
+                    const testLine = line ? line + ' ' + words[n] : words[n];
+                    const metrics = context.measureText(testLine);
+                    const testWidth = metrics.width;
+                    if (testWidth > maxWidth && line) {
+                        lines.push(line);
+                        line = words[n];
+                    } else {
+                        line = testLine;
+                    }
+                }
+                if (line) lines.push(line);
+                return lines;
+            }
+
+            const wrapped1 = wrapText(ctx, p1, maxTextWidth);
+            const wrapped2 = wrapText(ctx, p2, maxTextWidth);
+            const wrapped3 = wrapText(ctx, p3, maxTextWidth);
+            const allLines = [...wrapped1, '', '', ...wrapped2, '', '', ...wrapped3];
+            const nonEmptyCount = allLines.filter(l => l).length;
+            const totalSpan = (allLines.length - 1) * lineHeight + nonEmptyCount * paddingYConst;
+            let startY = height / 2 - totalSpan / 2;
+            allLines.forEach((line, i) => {
+                const y = startY + i * lineHeight;
+                if (line) {
+                    const textWidth = ctx.measureText(line).width;
+                    const paddingX = fontSize * 0.4;
+                    const paddingY = fontSize * 0.3;
+                    // 背景遮挡矩形
+                    ctx.fillStyle = '#00B140';
+                    ctx.fillRect((width - textWidth) / 2 - paddingX,
+                        y - lineHeight / 2 - paddingY / 2,
+                        textWidth + paddingX * 2,
+                        lineHeight + paddingY);
+                    // 前景文字
+                    ctx.fillStyle = '#00D4AA';
+                    ctx.fillText(line, width / 2, y);
+                }
+            });
+
+            // 更新提示词
+            updatePromptText();
+
+            // 显示结果区域
+            document.getElementById('result-section').classList.add('show');
+        }
+
+        function updatePromptText() {
+            const promptTemplate = `{{ File: Original Image }}
+
+Update the input image by replacing the green screen according to the description provided on it, ensuring that the new scene blends seamlessly as a whole. The final image should have no green screen(#00B140), reference lines(#00D4AA) or text description(#00D4AA) visible.
+
+\`\`\`yaml
+{{ YAML格式提示词 }}
+\`\`\`
+
+Do not change the input aspect ratio.
+
+Return the drawn picture.`;
+
+            const promptTemplate2 = `{{ File: Original Image }}
+
+Create a new image by combining the elements from the provided images. Take the [element from image 1] and place it with/on the [element from image 2]. The final image should ensure that the new scene blends seamlessly as a whole.
+
+\`\`\`yaml
+{{ YAML格式提示词 }}
+\`\`\`
+
+Do not change the input aspect ratio.
+
+Return the drawn picture.`;
+
+            document.getElementById('prompt-text').textContent = promptTemplate;
+            document.getElementById('prompt-text2').textContent = promptTemplate2;
+        }
+
+        function downloadImage(scale = 1) {
+            const link = document.createElement('a');
+            const s = Math.max(1, Math.floor(scale));
+            const orientTag = (typeof orientation !== 'undefined' && orientation === 'portrait') ? 'portrait' : 'landscape';
+            const labelTag = (typeof currentLabel !== 'undefined' && currentLabel) ? currentLabel : 'preset';
+            const ratioTag = (typeof currentRatio !== 'undefined' && currentRatio ? currentRatio : '16:9').replace(':', 'x');
+
+            let dataUrl;
+            if (window.__exportWorkspacePNG) {
+                dataUrl = window.__exportWorkspacePNG(s);
+            } else {
+                // 回退：直接导出当前画布
+                const canvas = document.getElementById('greenscreen-canvas');
+                dataUrl = canvas.toDataURL('image/png');
+            }
+
+            link.download = `workspace_${labelTag}_${orientTag}_${ratioTag}_${s}x.png`;
+            link.href = dataUrl;
+            link.click();
+        }
+
+        function copyPrompt() {
+            const promptText = document.getElementById('prompt-text').textContent;
+            const copyBtn = document.getElementById('copy-btn1');
+
+            navigator.clipboard.writeText(promptText).then(() => {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ 已复制 Copied!';
+                copyBtn.classList.add('copy-success');
+
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copy-success');
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // 降级方案
+                const textArea = document.createElement('textarea');
+                textArea.value = promptText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ 已复制 Copied!';
+                copyBtn.classList.add('copy-success');
+
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copy-success');
+                }, 2000);
+            });
+        }
+
+        function copyPrompt2() {
+            const promptText = document.getElementById('prompt-text2').textContent;
+            const copyBtn = document.getElementById('copy-btn2');
+
+            navigator.clipboard.writeText(promptText).then(() => {
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ 已复制 Copied!';
+                copyBtn.classList.add('copy-success');
+
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copy-success');
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // 降级方案
+                const textArea = document.createElement('textarea');
+                textArea.value = promptText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✅ 已复制 Copied!';
+                copyBtn.classList.add('copy-success');
+
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.classList.remove('copy-success');
+                }, 2000);
+            });
+        }
+
+        // 页面加载时生成默认绿幕
+        window.addEventListener('load', () => {
+            generateGreenscreen();
+        });
+
+        (function () {
+            // 注入少量样式（工具栏与标签列表）
+            const css = `
+    .workspace-toolbar { margin: 12px 0 8px; display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .workspace-toolbar .ws-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+    .workspace-toolbar button { background:#00B140; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:600; }
+    .ws-group { border:1px dashed #e9ecef; padding:8px; border-radius:6px; }
+    .ws-group-title { font-weight:700; color:#333; margin-right:8px; white-space:nowrap; }
+    .workspace-toolbar button:hover { filter:brightness(0.95); }
+    .ws-mask-list { display:flex; flex-direction: column; gap: 6px; }
+    .ws-mask-item { display:flex; align-items:center; gap:8px; }
+    .ws-mask-item input { flex:1; padding:6px 8px; border:1px solid #e9ecef; border-radius:4px; }
+    .ws-tip { color:#666; font-size: 12px; }
+    `;
+            const st = document.createElement('style');
+            st.textContent = css;
+            document.head.appendChild(st);
+
+            const resultSection = document.getElementById('result-section');
+            if (!resultSection) return;
+
+            // 构建工具栏（上传/添加绿幕/导出 + 标签列表），插入到现有画布上方
+            const toolbar = document.createElement('div');
+            toolbar.className = 'workspace-toolbar';
+            toolbar.innerHTML = `
+        <div class="ws-controls ws-group">
+            <span class="ws-group-title">参考图（Image）工具｜作用对象：选中图片</span>
+            <input id="ws-upload" type="file" accept="image/*" multiple title="导入参考图（作用于图片对象）">
+            <button id="ws-rot-left" type="button" title="对选中图片旋转 -15°">↺ 旋转-15°</button>
+            <button id="ws-rot-right" type="button" title="对选中图片旋转 +15°">↻ 旋转+15°</button>
+            <label style="display:flex;align-items:center;gap:6px;" title="对选中图片设置旋转角度">
+                角度
+                <input id="ws-rot-range" type="range" min="-180" max="180" step="1" value="0" style="width:120px;">
+                <input id="ws-rot-input" type="number" min="-180" max="180" step="1" value="0" style="width:70px;">
+            </label>
+            <button id="ws-flip-h" type="button" title="对选中图片进行水平翻转">⇋ 水平翻转</button>
+            <button id="ws-flip-v" type="button" title="对选中图片进行垂直翻转">⇅ 垂直翻转</button>
+        </div>
+        <div class="ws-controls ws-group">
+            <span class="ws-group-title">绿幕（Mask）工具｜作用对象：选中绿幕；文案显示为全局</span>
+            <button id="ws-add-mask" type="button" title="在工作区添加可拖拽的绿幕遮罩">➕ 添加绿幕</button>
+            <label style="display:flex;align-items:center;gap:6px;" title="切换是否在所有绿幕上显示三段文案（全局）">
+                <input id="ws-toggle-text" type="checkbox" checked>
+                显示遮罩文案（全局）
+            </label>
+        </div>
+        <div class="ws-tip">提示：拖拽移动；拖拽右下角缩放；图片保持宽高比；绿幕可自由缩放；最多导入 10 张图片。</div>
+        <!-- 旧的绿幕面板隐藏，已合并到下方“图层栏” -->
+        <div id="ws-mask-list" class="ws-mask-list" style="display:none;"></div>
+    `;
+            const canvasContainer = resultSection.querySelector('.canvas-container');
+            resultSection.insertBefore(toolbar, canvasContainer);
+
+            // 构建图层栏（位于工作区下方，不影响工作区比例）
+            const promptSection = resultSection.querySelector('.prompt-section');
+            const layersPanel = document.createElement('div');
+            layersPanel.id = 'ws-layers-panel';
+            layersPanel.className = 'ws-layers-panel';
+            layersPanel.innerHTML = `
+                <div class="ws-layers-header">
+                    <span class="ws-group-title">图层（Layers）</span>
+                    <div style="flex:1;"></div>
+                    <button id="ws-layers-toggle" type="button">收起</button>
+                </div>
+                <div id="ws-layers-content" class="ws-layers-content"></div>
+            `;
+            if (promptSection) {
+                resultSection.insertBefore(layersPanel, promptSection);
+            } else {
+                resultSection.appendChild(layersPanel);
+            }
+            let layersCollapsed = false;
+            const layersToggleBtn = layersPanel.querySelector('#ws-layers-toggle');
+            layersToggleBtn.addEventListener('click', () => {
+                layersCollapsed = !layersCollapsed;
+                if (layersCollapsed) {
+                    layersPanel.classList.add('collapsed');
+                    layersToggleBtn.textContent = '展开';
+                } else {
+                    layersPanel.classList.remove('collapsed');
+                    layersToggleBtn.textContent = '收起';
+                }
+            });
+
+            // 旋转/翻转控件逻辑
+            const rotLeftBtn  = toolbar.querySelector('#ws-rot-left');
+            const rotRightBtn = toolbar.querySelector('#ws-rot-right');
+            const rotRange    = toolbar.querySelector('#ws-rot-range');
+            const rotInput    = toolbar.querySelector('#ws-rot-input');
+            const flipHBtn    = toolbar.querySelector('#ws-flip-h');
+            const flipVBtn    = toolbar.querySelector('#ws-flip-v');
+
+            function degToRad(d){ return (d * Math.PI) / 180; }
+            function radToDeg(r){ return Math.round((r * 180) / Math.PI); }
+            function normalizeAngle(r){
+                while (r >  Math.PI) r -= 2*Math.PI;
+                while (r <= -Math.PI) r += 2*Math.PI;
+                return r;
+            }
+            function getSelectedImage(){
+                // 使用 try/catch 避免 TDZ：state 在初始化前访问会抛 ReferenceError
+                try {
+                    const o = state?.objects?.[state.selected];
+                    return (o && o.type === 'image') ? o : null;
+                } catch (e) {
+                    return null;
+                }
+            }
+            function syncRotationUI(){
+                const img = getSelectedImage();
+                const deg = img ? radToDeg(img.rotation || 0) : 0;
+                if (rotRange) rotRange.value = String(deg);
+                if (rotInput) rotInput.value = String(deg);
+            }
+            function applyRotation(deltaDeg){
+                const img = getSelectedImage();
+                if (!img) return;
+                img.rotation = normalizeAngle((img.rotation || 0) + degToRad(deltaDeg));
+                syncRotationUI();
+                render();
+            }
+            if (rotLeftBtn)  rotLeftBtn.addEventListener('click', () => applyRotation(-15));
+            if (rotRightBtn) rotRightBtn.addEventListener('click', () => applyRotation(+15));
+            if (rotRange) rotRange.addEventListener('input', (e) => {
+                const img = getSelectedImage(); if (!img) return;
+                const val = Number(e.target.value || 0);
+                img.rotation = normalizeAngle(degToRad(val));
+                if (rotInput) rotInput.value = String(val);
+                render();
+            });
+            if (rotInput) rotInput.addEventListener('input', (e) => {
+                const img = getSelectedImage(); if (!img) return;
+                const raw = Number(e.target.value || 0);
+                const val = Math.max(-180, Math.min(180, raw));
+                img.rotation = normalizeAngle(degToRad(val));
+                if (rotRange) rotRange.value = String(val);
+                render();
+            });
+            if (flipHBtn) flipHBtn.addEventListener('click', () => {
+                const img = getSelectedImage(); if (!img) return;
+                img.flipH = !img.flipH;
+                render();
+            });
+            if (flipVBtn) flipVBtn.addEventListener('click', () => {
+                const img = getSelectedImage(); if (!img) return;
+                img.flipV = !img.flipV;
+                render();
+            });
+            // 初始同步一次
+            // 延迟到当前宏任务后执行，确保 state 已初始化
+            setTimeout(() => syncRotationUI(), 0);
+            
+            // 工作空间宽高比：控件 + 覆盖逻辑（不改动现有 UI 的预设比例，支持单独设置工作区）
+            let workspaceRatioOverride = null;
+
+            // 构建“工作空间宽高比”控件行
+            const wsRatioRow = document.createElement('div');
+            wsRatioRow.className = 'ws-controls';
+            wsRatioRow.innerHTML = `
+            <span class="ws-group-title">工作区比例设置｜作用对象：工作空间</span>
+            <input id="ws-ratio-w" type="number" min="1" placeholder="工作区宽W" style="width:100px;padding:6px 8px;border:1px solid #e9ecef;border-radius:4px;" title="工作区宽（W）">
+            <span>:</span>
+            <input id="ws-ratio-h" type="number" min="1" placeholder="高H" style="width:100px;padding:6px 8px;border:1px solid #e9ecef;border-radius:4px;" title="工作区高（H）">
+            <button id="ws-apply-ratio" type="button" title="将左侧宽高应用到工作空间比例">应用工作区比例</button>
+            <button id="ws-apply-top" type="button" title="使用上方预设比例（含方向）覆盖为工作区比例">应用上方比例</button>
+            `;
+
+            // 插入到提示行之前
+            const wsTipEl = toolbar.querySelector('.ws-tip');
+            toolbar.insertBefore(wsRatioRow, wsTipEl);
+
+            // 填充输入框为当前上方选择的比例（仅在未覆盖时同步）
+            function __wsFillRatioInputs() {
+            try {
+                const raw = (currentRatio || '16:9').split(':');
+                let w = Number(raw[0]), h = Number(raw[1]);
+                if (orientation === 'landscape' && w < h) [w, h] = [h, w];
+                if (orientation === 'portrait' && w > h) [w, h] = [h, w];
+                const wEl = wsRatioRow.querySelector('#ws-ratio-w');
+                const hEl = wsRatioRow.querySelector('#ws-ratio-h');
+                if (wEl && hEl && !workspaceRatioOverride) { wEl.value = w; hEl.value = h; }
+            } catch (e) {}
+            }
+            __wsFillRatioInputs();
+
+            // 事件：应用/清除覆盖
+            wsRatioRow.querySelector('#ws-apply-ratio').addEventListener('click', () => {
+            const w = Number(wsRatioRow.querySelector('#ws-ratio-w').value);
+            const h = Number(wsRatioRow.querySelector('#ws-ratio-h').value);
+            if (w > 0 && h > 0) {
+                workspaceRatioOverride = { w, h };
+                updateWorkspaceSize();
+            }
+            });
+
+            // 应用上方比例：将当前上方选择（含方向）写入覆盖并重绘
+            wsRatioRow.querySelector('#ws-apply-top').addEventListener('click', () => {
+                try {
+                    const raw = (currentRatio || '16:9').split(':');
+                    let w = Number(raw[0]), h = Number(raw[1]);
+                    if (orientation === 'landscape' && w < h) [w, h] = [h, w];
+                    if (orientation === 'portrait' && w > h) [w, h] = [h, w];
+                    workspaceRatioOverride = { w, h };
+                    const wEl = wsRatioRow.querySelector('#ws-ratio-w');
+                    const hEl = wsRatioRow.querySelector('#ws-ratio-h');
+                    if (wEl && hEl) { wEl.value = w; hEl.value = h; }
+                    updateWorkspaceSize();
+                } catch (e) {}
+            });
+
+            // 回车快捷应用
+            ['#ws-ratio-w', '#ws-ratio-h'].forEach(sel => {
+            const el = wsRatioRow.querySelector(sel);
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') wsRatioRow.querySelector('#ws-apply-ratio').click();
+            });
+            });
+
+            // 覆盖 ratioPair：优先使用工作区自定义宽高比；否则回退原逻辑
+            const __ratioPairOrig = ratioPair;
+            ratioPair = function () {
+            if (workspaceRatioOverride && workspaceRatioOverride.w > 0 && workspaceRatioOverride.h > 0) {
+                let w = workspaceRatioOverride.w, h = workspaceRatioOverride.h;
+                if (orientation === 'landscape' && w < h) [w, h] = [h, w];
+                if (orientation === 'portrait' && w > h) [w, h] = [h, w];
+                return [w, h];
+            }
+            return __ratioPairOrig();
+            };
+
+            // 当用户点击上方预设比例或方向且未覆盖时，同步输入框显示
+            document.querySelectorAll('.aspect-btn[data-ratio], .orientation-btn').forEach(b => {
+            b.addEventListener('click', () => setTimeout(() => {
+                if (!workspaceRatioOverride) __wsFillRatioInputs();
+            }, 0));
+            });
+            // 复用已有 canvas 作为工作空间
+            const canvas = document.getElementById('greenscreen-canvas');
+            const ctx = canvas.getContext('2d');
+
+            // 输入框聚焦时跳过图层栏刷新，避免重建导致失焦
+            let __skipLayersRefresh = false;
+
+            const state = {
+                dpr: window.devicePixelRatio || 1,
+                cssW: 0,
+                cssH: 0,
+                showTexts: false,
+                objects: [], // { type:'image'|'mask', x,y,w,h, img?, label? }
+                selected: -1,
+                dragging: null, // { mode:'move'|'resize', dx,dy } for move; resize uses bottom-right handle
+            };
+
+            // 循环编号池：图片最多10，Mask最多15
+            const IMAGE_MAX = 10;
+            const MASK_MAX = 15;
+            state.imageIdsUsed = new Set();
+            state.maskIdsUsed = new Set();
+            state.imageNext = 1;
+            state.maskNext = 1;
+
+            function __allocSeq(usedSet, nextKey, max) {
+                let n = state[nextKey] || 1;
+                for (let tries = 0; tries < max; tries++) {
+                    if (!usedSet.has(n)) {
+                        usedSet.add(n);
+                        state[nextKey] = (n % max) + 1;
+                        return n;
+                    }
+                    n = (n % max) + 1;
+                }
+                return null;
+            }
+            function allocateImageSeq() { return __allocSeq(state.imageIdsUsed, 'imageNext', IMAGE_MAX); }
+            function allocateMaskSeq() { return __allocSeq(state.maskIdsUsed, 'maskNext', MASK_MAX); }
+            function releaseImageSeq(n) { if (typeof n === 'number') state.imageIdsUsed.delete(n); }
+            function releaseMaskSeq(n) { if (typeof n === 'number') state.maskIdsUsed.delete(n); }
+
+            function ratioPair() {
+                const wsToggleEl = toolbar.querySelector('#ws-toggle-text');
+                if (wsToggleEl) {
+                    wsToggleEl.checked = !!state.showTexts;
+                    wsToggleEl.addEventListener('change', (e) => {
+                        state.showTexts = !!e.target.checked;
+                        render();
+                    });
+                }
+                const raw = (currentRatio || '16:9').split(':');
+                let w = Number(raw[0]), h = Number(raw[1]);
+                if (orientation === 'landscape' && w < h) [w, h] = [h, w];
+                if (orientation === 'portrait' && w > h) [w, h] = [h, w];
+                return [w, h];
+            }
+
+            function updateWorkspaceSize() {
+                const prevW = state.cssW || 0;
+                const prevH = state.cssH || 0;
+
+                const containerWidth = resultSection.clientWidth - 40; // 适度内边距
+                const maxW = Math.max(300, containerWidth);
+                const [rw, rh] = ratioPair();
+                const cssW = maxW;
+                const cssH = Math.round(cssW * (rh / rw));
+
+                state.cssW = cssW;
+                state.cssH = cssH;
+
+                const dpr = window.devicePixelRatio || 1;
+                state.dpr = dpr;
+                canvas.style.width = cssW + 'px';
+                canvas.style.height = cssH + 'px';
+                canvas.width = Math.round(cssW * dpr);
+                canvas.height = Math.round(cssH * dpr);
+
+                // 尺寸变化时按比例整体缩放对象，保持布局大体一致
+                if (prevW && prevH && (prevW !== cssW || prevH !== cssH)) {
+                    const sx = cssW / prevW;
+                    const sy = cssH / prevH;
+                    state.objects.forEach(o => {
+                        o.x *= sx; o.y *= sy; o.w *= sx; o.h *= sy;
+                    });
+                }
+
+                render();
+            }
+
+            function render() {
+                const dpr = state.dpr;
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.clearRect(0, 0, state.cssW, state.cssH);
+
+                // 背景：纯白
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, state.cssW, state.cssH);
+
+                state.objects.forEach((obj, idx) => {
+                    if (obj.type === 'image') {
+                        if (obj.img) {
+                            ctx.save();
+                            const cx = obj.x + obj.w / 2;
+                            const cy = obj.y + obj.h / 2;
+                            const rot = obj.rotation || 0;
+                            const sX = obj.flipH ? -1 : 1;
+                            const sY = obj.flipV ? -1 : 1;
+                            ctx.translate(cx, cy);
+                            ctx.scale(sX, sY);
+                            if (rot) ctx.rotate(rot);
+                            ctx.drawImage(obj.img, -obj.w / 2, -obj.h / 2, obj.w, obj.h);
+                            ctx.restore();
+                        }
+                        // 为图片对象绘制左上角标签（与图层栏名称一致，不可编辑）
+                        const __imgTag = obj.seqName || obj.label;
+                        if (__imgTag) {
+                            ctx.save();
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textBaseline = 'top';
+                            ctx.textAlign = 'start';
+                            const padX = 6, padY = 4;
+                            const tx = obj.x + 6, ty = obj.y + 6;
+                            const tw = ctx.measureText(__imgTag).width;
+                            const th = 14; // 文字高度近似
+                            ctx.fillStyle = '#00B140';
+                            ctx.fillRect(tx - padX, ty - padY, tw + padX * 2, th + padY * 2);
+                            ctx.fillStyle = '#00D4AA';
+                            ctx.fillText(__imgTag, tx, ty);
+                            ctx.restore();
+                        }
+                    } else if (obj.type === 'mask') {
+                        // 绿幕
+                        ctx.fillStyle = '#00B140';
+                        ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
+                        ctx.strokeStyle = '#00D4AA';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+                        if (state.showTexts) {
+                            // 参考斜线：从右上角到左下角
+                            ctx.strokeStyle = '#00D4AA';
+                            ctx.lineWidth = 2;
+                            ctx.beginPath();
+                            ctx.moveTo(obj.x + obj.w, obj.y);
+                            ctx.lineTo(obj.x, obj.y + obj.h);
+                            ctx.stroke();
+
+                            // 标签：左上角
+                            ctx.fillStyle = '#00D4AA';
+                            ctx.font = 'bold 14px Arial';
+                            ctx.textBaseline = 'top';
+                            ctx.textAlign = 'start';
+                            ctx.fillText(obj.label || 'Mask', obj.x + 6, obj.y + 6);
+
+                            // 三行文案（自适应遮罩尺寸）
+                            (function drawMaskTexts() {
+                                const minSide = Math.min(obj.w, obj.h);
+                                const normW = (obj.w / minSide).toFixed(1);
+                                const normH = (obj.h / minSide).toFixed(1);
+                                const aspectText = `${normW}:${normH}`;
+
+                                const p1 = 'Green screen - Update the input image by replacing the green screen according to the description provided on it.';
+                                const p2 = `The aspect ratio of this image is ${aspectText}`;
+                                const p3 = 'Do not change the input aspect ratio.';
+
+                                // 可用文字区域（为左上角标签和底部留出安全距离）
+                                const safeTop = obj.y + 6 + 14 + 8; // 标签(14px) + padding
+                                const safeBottom = obj.y + obj.h - 8;
+                                const boxY = safeTop;
+                                const boxH = Math.max(10, safeBottom - safeTop);
+                                const boxX = obj.x;
+                                const boxW = obj.w;
+
+                                function wrapText(context, text, maxWidth) {
+                                    const words = text.split(' ');
+                                    const lines = [];
+                                    let line = '';
+                                    for (let n = 0; n < words.length; n++) {
+                                        const testLine = line ? line + ' ' + words[n] : words[n];
+                                        const metrics = context.measureText(testLine);
+                                        if (metrics.width > maxWidth && line) {
+                                            lines.push(line);
+                                            line = words[n];
+                                        } else {
+                                            line = testLine;
+                                        }
+                                    }
+                                    if (line) lines.push(line);
+                                    return lines;
+                                }
+
+                                // 初始字号按最短边估算，随后自适应缩小直至高度可容纳
+                                let fitFS = Math.min(obj.w, obj.h) / 12;
+                                let lines = [];
+                                let lineHeightLocal = 0;
+
+                                for (let i = 0; i < 10; i++) {
+                                    ctx.save();
+                                    const paddingX = fitFS * 0.4;
+                                    const paddingY = fitFS * 0.3;
+                                    const maxTextWidth = Math.max(10, boxW - 2 * paddingX - 8);
+
+                                    ctx.font = `bold ${fitFS}px Arial`;
+                                    const w1 = wrapText(ctx, p1, maxTextWidth);
+                                    const w2 = wrapText(ctx, p2, maxTextWidth);
+                                    const w3 = wrapText(ctx, p3, maxTextWidth);
+                                    ctx.restore();
+
+                                    lines = [...w1, '', '', ...w2, '', '', ...w3];
+                                    lineHeightLocal = fitFS * 1.2;
+
+                                    const nonEmpty = lines.filter(Boolean).length;
+                                    const totalSpan = (lines.length - 1) * lineHeightLocal + nonEmpty * paddingY;
+
+                                    if (totalSpan <= boxH) break;
+
+                                    const ratio = Math.max(0.5, boxH / (totalSpan + 0.0001));
+                                    fitFS = Math.max(6, fitFS * ratio * 0.98);
+                                }
+
+                                const paddingY = fitFS * 0.3;
+                                const nonEmpty = lines.filter(Boolean).length;
+                                const totalSpan = (lines.length - 1) * lineHeightLocal + nonEmpty * paddingY;
+                                // 将起始 Y 钳制，保证首行背景矩形顶部不越过标签安全区
+                                let startY = Math.max(
+                                    boxY + lineHeightLocal / 2 + paddingY / 2,
+                                    boxY + (boxH - totalSpan) / 2
+                                );
+
+                                // 裁剪到文本可用区域，避免超宽比时越界被“硬截断”的视觉问题
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.rect(boxX, boxY, boxW, boxH);
+                                ctx.clip();
+
+                                ctx.font = `bold ${fitFS}px Arial`;
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+
+                                lines.forEach((line, i) => {
+                                    const y = startY + i * lineHeightLocal;
+                                    if (line) {
+                                        const textWidth = ctx.measureText(line).width;
+                                        const paddingX = fitFS * 0.4;
+                                        const paddingY = fitFS * 0.3;
+                                        // 背景遮挡矩形（在 clip 内，不会侵入标签）
+                                        ctx.fillStyle = '#00B140';
+                                        ctx.fillRect(
+                                            obj.x + (obj.w - textWidth) / 2 - paddingX,
+                                            y - lineHeightLocal / 2 - paddingY / 2,
+                                            textWidth + paddingX * 2,
+                                            lineHeightLocal + paddingY
+                                        );
+                                        // 前景文字
+                                        ctx.fillStyle = '#00D4AA';
+                                        ctx.fillText(line, obj.x + obj.w / 2, y);
+                                    }
+                                });
+                                ctx.restore();
+                            })();
+                        } else {
+                            // 仅标签：居中显示
+                            ctx.save();
+                            ctx.fillStyle = '#00D4AA';
+                            ctx.font = 'bold 14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            // 墨绿色背景块，尺寸基于文字测量并留出内边距
+                            (function () {
+                                const label = obj.label || 'Mask';
+                                const fs = parseInt(ctx.font, 10) || 14;
+                                const paddingX = Math.max(6, fs * 0.6);
+                                const paddingY = Math.max(4, fs * 0.4);
+                                const textWidth = ctx.measureText(label).width;
+                                const cx = obj.x + obj.w / 2;
+                                const cy = obj.y + obj.h / 2;
+
+                                // 背景使用墨绿色，风格与绿幕一致且更压暗
+                                ctx.fillStyle = '#00B140';
+                                ctx.fillRect(
+                                    cx - textWidth / 2 - paddingX,
+                                    cy - fs / 2 - paddingY,
+                                    textWidth + paddingX * 2,
+                                    fs + paddingY * 2
+                                );
+
+                                // 前景文字维持浅绿色
+                                ctx.fillStyle = '#00D4AA';
+                                ctx.fillText(label, cx, cy);
+                            })();
+                            ctx.restore();
+                        }
+                    }
+
+                    // 选中态：虚线框 + 右下角缩放手柄
+                    if (idx === state.selected) {
+                        ctx.save();
+                        ctx.strokeStyle = '#006F2A';
+                        ctx.setLineDash([6, 4]);
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeRect(obj.x, obj.y, obj.w, obj.h);
+                        ctx.setLineDash([]);
+                        const hs = 10;
+                        ctx.fillStyle = '#006F2A';
+                        ctx.fillRect(obj.x + obj.w - hs, obj.y + obj.h - hs, hs, hs);
+                        ctx.restore();
+                    }
+                });
+                state.objects.forEach((obj) => {
+                    // 图片：总是覆盖绘制一次左上角标签
+                    if (obj.type === 'image') {
+                        const __imgTag = obj.seqName || obj.label;
+                        if (__imgTag) {
+                            ctx.save();
+                            ctx.font = 'bold 12px Arial';
+                            ctx.textBaseline = 'top';
+                            ctx.textAlign = 'start';
+                            const padX = 6, padY = 4;
+                            const tx = obj.x + 6, ty = obj.y + 6;
+                            const tw = ctx.measureText(__imgTag).width;
+                            const th = 14;
+                            ctx.fillStyle = '#00B140';
+                            ctx.fillRect(tx - padX, ty - padY, tw + padX * 2, th + padY * 2);
+                            ctx.fillStyle = '#00D4AA';
+                            ctx.fillText(__imgTag, tx, ty);
+                            ctx.restore();
+                        }
+                    }
+                    // 绿幕：仅在显示文案模式下（左上角有标签）再叠加一次左上角标签
+                    else if (obj.type === 'mask' && state.showTexts) {
+                        ctx.save();
+                        ctx.fillStyle = '#00D4AA';
+                        ctx.font = 'bold 14px Arial';
+                        ctx.textBaseline = 'top';
+                        ctx.textAlign = 'start';
+                        ctx.fillText(obj.label || 'Mask', obj.x + 6, obj.y + 6);
+                        ctx.restore();
+                    }
+                });
+                if (!__skipLayersRefresh && typeof refreshLayersPanel === 'function') {
+                    refreshLayersPanel();
+                }
+            }
+
+            function hitTest(x, y) {
+                for (let i = state.objects.length - 1; i >= 0; i--) {
+                    const o = state.objects[i];
+                    if (x >= o.x && y >= o.y && x <= o.x + o.w && y <= o.y + o.h) {
+                        const hs = 12;
+                        if (x >= o.x + o.w - hs && y >= o.y + o.h - hs) {
+                            return { index: i, onHandle: true };
+                        }
+                        return { index: i, onHandle: false };
+                    }
+                }
+                return { index: -1, onHandle: false };
+            }
+
+            // 鼠标交互
+            canvas.addEventListener('mousemove', (e) => {
+                if (state.dragging) return; // 拖拽中不改 cursor
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left, y = e.clientY - rect.top;
+                const hit = hitTest(x, y);
+                if (hit.index >= 0) {
+                    canvas.style.cursor = hit.onHandle ? 'nwse-resize' : 'move';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
+            });
+
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left, y = e.clientY - rect.top;
+                const hit = hitTest(x, y);
+                state.selected = hit.index;
+
+                if (state.selected >= 0) {
+                    // 置顶
+                    const o = state.objects.splice(state.selected, 1)[0];
+                    state.objects.push(o);
+                    state.selected = state.objects.length - 1;
+
+                    if (hit.onHandle) {
+                        state.dragging = { mode: 'resize' };
+                        o._aspect = o.w / o.h;
+                    } else {
+                        state.dragging = { mode: 'move', dx: x - o.x, dy: y - o.y };
+                    }
+                    canvas.style.cursor = hit.onHandle ? 'nwse-resize' : 'move';
+                } else {
+                    state.dragging = null;
+                    canvas.style.cursor = 'default';
+                    if (typeof syncRotationUI === 'function') syncRotationUI();
+                }
+                render();
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!state.dragging || state.selected < 0) return;
+                const o = state.objects[state.selected];
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left, y = e.clientY - rect.top;
+
+                if (state.dragging.mode === 'move') {
+                    o.x = x - state.dragging.dx;
+                    o.y = y - state.dragging.dy;
+                } else if (state.dragging.mode === 'resize') {
+                    let newW = Math.max(20, x - o.x);
+                    let newH = Math.max(20, y - o.y);
+                    if (o.type === 'image') {
+                        const a = o._aspect || (o.w / o.h);
+                        if (newW / newH > a) newW = newH * a;
+                        else newH = newW / a;
+                    }
+                    o.w = newW;
+                    o.h = newH;
+                }
+                render();
+            });
+
+            window.addEventListener('mouseup', () => {
+                state.dragging = null;
+                canvas.style.cursor = 'default';
+            });
+
+            // 上传图片（最多 10 张）
+            document.getElementById('ws-upload').addEventListener('change', (e) => {
+                const files = Array.from(e.target.files || []);
+                const exists = state.objects.filter(o => o.type === 'image').length;
+                const allow = Math.max(0, 10 - exists);
+                const chosen = files.slice(0, allow);
+                chosen.forEach((file, idx) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const maxW = state.cssW * 0.45;
+                            const scale = Math.min(1, maxW / img.width);
+                            const w = Math.max(40, img.width * scale);
+                            const h = Math.max(40, img.height * scale);
+                            const offset = idx * 12;
+                            const obj = {
+                                type: 'image',
+                                img,
+                                x: (state.cssW - w) / 2 + offset,
+                                y: (state.cssH - h) / 2 + offset,
+                                w, h,
+                                rotation: 0,
+                                flipH: false,
+                                flipV: false
+                            };
+
+                            // 分配图片序号（循环池 1..10），不足则提示
+                            const seq = allocateImageSeq();
+                            if (seq == null) { alert('无法添加图片：已达到 10 张上限'); return; }
+                            obj.seqId = seq;
+                            obj.seqName = `Image ${seq}`;
+                            obj.label = obj.seqName;
+
+                            state.objects.push(obj);
+                            state.selected = state.objects.length - 1;
+                            if (typeof syncRotationUI === 'function') syncRotationUI();
+                            render();
+                        };
+                        img.src = reader.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+                e.target.value = '';
+            });
+
+            // 图层栏：渲染与拖拽排序
+            function refreshLayersPanel() {
+                const panel = document.getElementById('ws-layers-panel');
+                const content = document.getElementById('ws-layers-content');
+                if (!panel || !content) return;
+
+                content.innerHTML = '';
+                state.objects.forEach((o, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'ws-layer-item' + (idx === state.selected ? ' selected' : '');
+                    item.setAttribute('draggable', 'true');
+                    item.dataset.index = String(idx);
+
+                    const type = document.createElement('span');
+                    type.className = 'ws-layer-type';
+                    type.textContent = o.type === 'image' ? '🖼️' : '🟩';
+
+                    const label = document.createElement('span');
+                    label.className = 'ws-layer-label';
+                    label.textContent = o.label || (o.type === 'image' ? 'Image' : 'Mask');
+
+                    const handle = document.createElement('span');
+                    handle.className = 'ws-layer-handle';
+                    handle.textContent = '≡';
+
+                    // 静态序号标签：Image N / Mask N（固定，不随重排改变，不可编辑）
+                    const staticName = document.createElement('span');
+                    staticName.className = 'ws-layer-label';
+                    staticName.textContent = o.type === 'image'
+                        ? (o.seqName || o.label || 'Image')
+                        : (o.seqName || 'Mask');
+
+                    item.appendChild(type);
+                    item.appendChild(staticName);
+
+                    // 绿幕：提供自定义标签与删除按钮；图片：仅提供删除按钮
+                    if (o.type === 'mask') {
+                        const nameInput = document.createElement('input');
+                        nameInput.type = 'text';
+                        nameInput.placeholder = '标签名';
+                        nameInput.value = o.label || '';
+                        nameInput.style.flex = '1';
+                        nameInput.style.minWidth = '120px';
+
+                        const delBtn = document.createElement('button');
+                        delBtn.type = 'button';
+                        delBtn.textContent = '🗑️';
+                        delBtn.title = '删除此绿幕';
+
+                        // 阻止输入与按钮冒泡，避免误选中或拖拽
+                        ['click','mousedown','mouseup','dblclick','keydown','keyup','input'].forEach(ev => {
+                            nameInput.addEventListener(ev, e => e.stopPropagation());
+                        });
+                        ['click','mousedown','mouseup','dblclick','keydown','keyup'].forEach(ev => {
+                            delBtn.addEventListener(ev, e => e.stopPropagation());
+                        });
+
+                        // 聚焦时锁定，避免 render 重建导致输入失焦；失焦后再触发一次安全渲染
+                        nameInput.addEventListener('focus', () => { __skipLayersRefresh = true; });
+                        nameInput.addEventListener('blur', () => { __skipLayersRefresh = false; render(); });
+
+                        // 输入联动自定义标签（输入过程中跳过图层栏刷新，保持焦点与光标）
+                        nameInput.addEventListener('input', () => {
+                            o.label = nameInput.value;
+                            __skipLayersRefresh = true;
+                            render();
+                        });
+
+                        // 删除绿幕对象
+                        delBtn.addEventListener('click', () => {
+                            const removeAt = state.objects.indexOf(o);
+                            if (removeAt >= 0) {
+                                // 释放编号
+                                if (typeof o.seqId === 'number') releaseMaskSeq(o.seqId);
+                                state.objects.splice(removeAt, 1);
+                                if (state.selected >= state.objects.length) {
+                                    state.selected = state.objects.length - 1;
+                                }
+                                render();
+                            }
+                        });
+
+                        item.appendChild(nameInput);
+                        item.appendChild(delBtn);
+                    } else if (o.type === 'image') {
+                        // 为图片提供删除按钮（不提供重命名）
+                        const delBtn = document.createElement('button');
+                        delBtn.type = 'button';
+                        delBtn.textContent = '🗑️';
+                        delBtn.title = '删除此图片';
+
+                        ['click','mousedown','mouseup','dblclick','keydown','keyup'].forEach(ev => {
+                            delBtn.addEventListener(ev, e => e.stopPropagation());
+                        });
+
+                        delBtn.addEventListener('click', () => {
+                            const removeAt = state.objects.indexOf(o);
+                            if (removeAt >= 0) {
+                                // 释放编号
+                                if (typeof o.seqId === 'number') releaseImageSeq(o.seqId);
+                                state.objects.splice(removeAt, 1);
+                                if (state.selected >= state.objects.length) {
+                                    state.selected = state.objects.length - 1;
+                                }
+                                if (typeof syncRotationUI === 'function') syncRotationUI();
+                                render();
+                            }
+                        });
+
+                        item.appendChild(delBtn);
+                    }
+
+                    item.appendChild(handle);
+
+                    // 点击联动选中
+                    item.addEventListener('click', () => {
+                        state.selected = idx;
+                        if (typeof syncRotationUI === 'function') syncRotationUI();
+                        render();
+                    });
+
+                    // 拖拽排序
+                    item.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', String(idx));
+                        item.classList.add('dragging');
+                    });
+                    item.addEventListener('dragend', () => {
+                        item.classList.remove('dragging');
+                    });
+                    item.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                    });
+                    item.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        const src = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                        const dst = parseInt(item.dataset.index, 10);
+                        if (isNaN(src) || isNaN(dst) || src === dst) return;
+                        const moved = state.objects.splice(src, 1)[0];
+                        const insertAt = src < dst ? dst - 1 : dst;
+                        state.objects.splice(insertAt, 0, moved);
+                        state.selected = insertAt;
+                        render();
+                    });
+
+                    content.appendChild(item);
+                });
+            }
+
+            // 添加绿幕（不锁定宽高比）
+            function refreshMaskList() {
+                const list = document.getElementById('ws-mask-list');
+                const masks = state.objects.map((o, idx) => ({ o, idx })).filter(t => t.o.type === 'mask');
+                list.innerHTML = '';
+                masks.forEach(({ o, idx }, i) => {
+                    const row = document.createElement('div');
+                    row.className = 'ws-mask-item';
+                    row.innerHTML = `
+            <span style="min-width:48px;color:#333;">绿幕${i + 1}</span>
+            <input type="text" value="${o.label || ''}" placeholder="标签">
+            <button type="button" class="ws-mask-del" title="删除">🗑️</button>
+        `;
+                    const input = row.querySelector('input');
+                    input.addEventListener('input', () => { o.label = input.value; render(); });
+
+                    // 删除按钮：删除对应绿幕，不影响其他对象；更新选中态、列表与画布
+                    const delBtn = row.querySelector('.ws-mask-del');
+                    delBtn.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        // 释放编号
+                        if (typeof o.seqId === 'number') releaseMaskSeq(o.seqId);
+                        state.objects.splice(idx, 1);
+                        if (state.selected >= state.objects.length) {
+                            state.selected = state.objects.length - 1;
+                        }
+                        refreshMaskList();
+                        render();
+                    });
+                    row.addEventListener('click', () => { state.selected = idx; render(); });
+                    list.appendChild(row);
+                });
+            }
+
+            document.getElementById('ws-add-mask').addEventListener('click', () => {
+                const [rw, rh] = __ratioPairOrig(); // 使用上方选择比例与方向，不受工作区覆盖影响
+                const maxW = state.cssW * 0.5;
+                const maxH = state.cssH * 0.5;
+                let w = maxW;
+                let h = (w * rh) / rw;
+                if (h > maxH) {
+                    h = maxH;
+                    w = (h * rw) / rh;
+                }
+                // 分配 Mask 序号（循环池 1..15），不足则提示
+                const seq = allocateMaskSeq();
+                if (seq == null) { alert('无法添加绿幕：已达到 15 个上限'); return; }
+                const obj = {
+                    type: 'mask',
+                    x: (state.cssW - w) / 2,
+                    y: (state.cssH - h) / 2,
+                    w, h,
+                    // 自定义标签独立，默认空；工作区显示此标签；图层栏显示固定序号在 staticName
+                    label: '',
+                    // 固定序号名（不变更、不受重排影响）
+                    seqId: seq,
+                    seqName: `Mask ${seq}`
+                };
+                state.objects.push(obj);
+                state.selected = state.objects.length - 1;
+                refreshMaskList();
+                render();
+            });
+
+            // 导出工作空间为图片（PNG）
+            window.__exportWorkspacePNG = function (scale = 1) {
+                const s = Math.max(1, Math.floor(scale));
+                const off = document.createElement('canvas');
+                const w = Math.round(state.cssW * s);
+                const h = Math.round(state.cssH * s);
+                off.width = w; off.height = h;
+                const c = off.getContext('2d');
+
+                // 以 CSS 坐标系绘制，放大 s 倍输出
+                c.setTransform(s, 0, 0, s, 0, 0);
+
+                // 白色背景
+                c.fillStyle = '#ffffff';
+                c.fillRect(0, 0, state.cssW, state.cssH);
+
+                // 绘制对象
+                state.objects.forEach(obj => {
+                    if (obj.type === 'image') {
+                        if (obj.img) {
+                            c.save();
+                            const cx = obj.x + obj.w / 2;
+                            const cy = obj.y + obj.h / 2;
+                            const rot = obj.rotation || 0;
+                            const sX = obj.flipH ? -1 : 1;
+                            const sY = obj.flipV ? -1 : 1;
+                            c.translate(cx, cy);
+                            c.scale(sX, sY);
+                            if (rot) c.rotate(rot);
+                            c.drawImage(obj.img, -obj.w / 2, -obj.h / 2, obj.w, obj.h);
+                            c.restore();
+                        }
+                    } else if (obj.type === 'mask') {
+                        // 绿幕与描边
+                        c.fillStyle = '#00B140';
+                        c.fillRect(obj.x, obj.y, obj.w, obj.h);
+                        c.strokeStyle = '#00D4AA';
+                        c.lineWidth = 2;
+                        c.strokeRect(obj.x, obj.y, obj.w, obj.h);
+
+                        if (state.showTexts) {
+                            // 参考斜线
+                            c.strokeStyle = '#00D4AA';
+                            c.lineWidth = 2;
+                            c.beginPath();
+                            c.moveTo(obj.x + obj.w, obj.y);
+                            c.lineTo(obj.x, obj.y + obj.h);
+                            c.stroke();
+                            // 标签：左上角
+                            c.fillStyle = '#00D4AA';
+                            c.font = 'bold 14px Arial';
+                            c.textBaseline = 'top';
+                            c.textAlign = 'start';
+                            c.fillText(obj.label || 'Mask', obj.x + 6, obj.y + 6);
+
+                            // 三行文案（导出同样自适应）
+                            const minSide = Math.min(obj.w, obj.h);
+                            const normW = (obj.w / minSide).toFixed(1);
+                            const normH = (obj.h / minSide).toFixed(1);
+                            const aspectText = `${normW}:${normH}`;
+
+                            const p1 = 'Green screen - Update the input image by replacing the green screen according to the description provided on it.';
+                            const p2 = `The aspect ratio of this image is ${aspectText}`;
+                            const p3 = 'Do not change the input aspect ratio.';
+
+                            const safeTop = obj.y + 6 + 14 + 8;
+                            const safeBottom = obj.y + obj.h - 8;
+                            const boxY = safeTop;
+                            const boxH = Math.max(10, safeBottom - safeTop);
+                            const boxX = obj.x;
+                            const boxW = obj.w;
+
+                            function wrapText(context, text, maxWidth) {
+                                const words = text.split(' ');
+                                const lines = [];
+                                let line = '';
+                                for (let n = 0; n < words.length; n++) {
+                                    const testLine = line ? line + ' ' + words[n] : words[n];
+                                    const metrics = context.measureText(testLine);
+                                    if (metrics.width > maxWidth && line) {
+                                        lines.push(line);
+                                        line = words[n];
+                                    } else {
+                                        line = testLine;
+                                    }
+                                }
+                                if (line) lines.push(line);
+                                return lines;
+                            }
+
+                            let fitFS = Math.min(obj.w, obj.h) / 12;
+                            let lines = [];
+                            let lineHeightLocal = 0;
+
+                            for (let i = 0; i < 10; i++) {
+                                c.save();
+                                const paddingX = fitFS * 0.4;
+                                const paddingY = fitFS * 0.3;
+                                const maxTextWidth = Math.max(10, boxW - 2 * paddingX - 8);
+
+                                c.font = `bold ${fitFS}px Arial`;
+                                const w1 = wrapText(c, p1, maxTextWidth);
+                                const w2 = wrapText(c, p2, maxTextWidth);
+                                const w3 = wrapText(c, p3, maxTextWidth);
+                                c.restore();
+
+                                lines = [...w1, '', '', ...w2, '', '', ...w3];
+                                lineHeightLocal = fitFS * 1.2;
+
+                                const nonEmpty = lines.filter(Boolean).length;
+                                const totalSpan = (lines.length - 1) * lineHeightLocal + nonEmpty * paddingY;
+
+                                if (totalSpan <= boxH) break;
+
+                                const ratio = Math.max(0.5, boxH / (totalSpan + 0.0001));
+                                fitFS = Math.max(6, fitFS * ratio * 0.98);
+                            }
+
+                            const paddingY = fitFS * 0.3;
+                            const nonEmpty = lines.filter(Boolean).length;
+                            const totalSpan = (lines.length - 1) * lineHeightLocal + nonEmpty * paddingY;
+                            // 将起始 Y 钳制，保证首行背景矩形顶部不越过标签安全区
+                            let startY = Math.max(
+                                boxY + lineHeightLocal / 2 + paddingY / 2,
+                                boxY + (boxH - totalSpan) / 2
+                            );
+
+                            // 裁剪到文本可用区域，导出结果一致
+                            c.save();
+                            c.beginPath();
+                            c.rect(boxX, boxY, boxW, boxH);
+                            c.clip();
+
+                            c.font = `bold ${fitFS}px Arial`;
+                            c.textAlign = 'center';
+                            c.textBaseline = 'middle';
+                            lines.forEach((line, i) => {
+                                const y = startY + i * lineHeightLocal;
+                                if (line) {
+                                    const textWidth = c.measureText(line).width;
+                                    const paddingX = fitFS * 0.4;
+                                    const paddingY = fitFS * 0.3;
+                                    c.fillStyle = '#00B140';
+                                    c.fillRect(
+                                        obj.x + (obj.w - textWidth) / 2 - paddingX,
+                                        y - lineHeightLocal / 2 - paddingY / 2,
+                                        textWidth + paddingX * 2,
+                                        lineHeightLocal + paddingY
+                                    );
+                                    c.fillStyle = '#00D4AA';
+                                    c.fillText(line, obj.x + obj.w / 2, y);
+                                }
+                            });
+                            c.restore();
+                        } else {
+                            // 仅标签：居中显示（导出）
+                            c.save();
+                            c.fillStyle = '#00D4AA';
+                            c.font = 'bold 14px Arial';
+                            c.textAlign = 'center';
+                            c.textBaseline = 'middle';
+                            // 墨绿色背景块（导出同样适配）
+                            (function () {
+                                const label = obj.label || 'Mask';
+                                const fs = parseInt(c.font, 10) || 14;
+                                const paddingX = Math.max(6, fs * 0.6);
+                                const paddingY = Math.max(4, fs * 0.4);
+                                const textWidth = c.measureText(label).width;
+                                const cx = obj.x + obj.w / 2;
+                                const cy = obj.y + obj.h / 2;
+
+                                c.fillStyle = '#00B140';
+                                c.fillRect(
+                                    cx - textWidth / 2 - paddingX,
+                                    cy - fs / 2 - paddingY,
+                                    textWidth + paddingX * 2,
+                                    fs + paddingY * 2
+                                );
+
+                                c.fillStyle = '#00D4AA';
+                                c.fillText(label, cx, cy);
+                            })();
+                            c.restore();
+                        }
+                    }
+                });
+
+                return off.toDataURL('image/png');
+            };
+
+            // 跟随比例/方向与窗口尺寸变化
+            window.addEventListener('resize', () => updateWorkspaceSize());
+
+            // 用工作空间逻辑接管 generateGreenscreen（保持提示词区域显示）
+            const __origGen = window.generateGreenscreen;
+            window.__workspaceActive = true;
+            window.generateGreenscreen = function () {
+                if (typeof updatePromptText === 'function') updatePromptText();
+                document.getElementById('result-section')?.classList.add('show');
+            };
+
+            // 初始
+            window.addEventListener('load', () => {
+                updateWorkspaceSize();
+                refreshMaskList();
+                // 初始刷新图层栏
+                if (typeof refreshLayersPanel === 'function') refreshLayersPanel();
+            });
+        })();
+    </script>
+</body>
+
+</html>
