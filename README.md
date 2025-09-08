@@ -6,6 +6,10 @@ This project is a greenscreen generator that allows users to create images with 
 
 - GitHub Pages: https://meomeo-dev.github.io/greenscreen-gh-pages/
 
+## 案例展示
+
+![案例示例 - case1](case1.png)
+
 ## Deploy (GitHub Actions)
 
 - Workflow file: `.github/workflows/pages.yml`
